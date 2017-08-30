@@ -128,7 +128,7 @@ class GenerateWpClosure < ActiveRecord::Migration[5.0]
       ON r1.to_id = r2.from_id AND r1.depth = #{depth} AND r2.depth = 1
     SQL
 
-    result.cmd_tuples
+    result.try(:cmd_tuples) || 0
   end
 
   def get_circular(depth)

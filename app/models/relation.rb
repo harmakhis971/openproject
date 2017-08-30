@@ -89,7 +89,7 @@ class Relation < ActiveRecord::Base
   }.freeze
 
   validates_presence_of :from, :to, :relation_type
-  validates_inclusion_of :relation_type, in: TYPES.keys
+  validates_inclusion_of :relation_type, in: TYPES.keys + ['hierarchy']
   validates_numericality_of :delay, allow_nil: true
   validates_uniqueness_of :to_id, scope: :from_id
 
@@ -193,7 +193,8 @@ class Relation < ActiveRecord::Base
   end
 
   def shared_hierarchy?
-    from.is_descendant_of?(to) || from.is_ancestor_of?(to)
+    # TODO: reimplement
+    # from.is_descendant_of?(to) || from.is_ancestor_of?(to)
   end
 
   private

@@ -1,4 +1,5 @@
 #-- encoding: UTF-8
+
 #-- copyright
 # OpenProject is a project management system.
 # Copyright (C) 2012-2017 the OpenProject Foundation (OPF)
@@ -27,10 +28,6 @@
 # See doc/COPYRIGHT.rdoc for more details.
 #++
 
-# While loading the Issue class below, we lazy load the Project class.
-# Which itself need WorkPackage.
-# So we create an 'empty' Issue class first, to make Project happy.
-
 class WorkPackage < ActiveRecord::Base
   include WorkPackage::Validations
   include WorkPackage::SchedulingRules
@@ -38,6 +35,7 @@ class WorkPackage < ActiveRecord::Base
   include WorkPackage::AskBeforeDestruction
   include WorkPackage::TimeEntries
   include WorkPackage::Ancestors
+  include WorkPackage::Dag
 
   include OpenProject::Journal::AttachmentHelper
 
@@ -127,13 +125,14 @@ class WorkPackage < ActiveRecord::Base
 
   before_save :store_former_parent_id
 
-  include OpenProject::NestedSet::WithRootIdScope
+  #include OpenProject::NestedSet::WithRootIdScope
 
   after_save :reschedule_following_work_packages,
              :update_parent_attributes
 
-  after_move :remove_invalid_relations,
-             :recalculate_attributes_for_former_parent
+  # TODO: adapt to have them called
+  #after_move :remove_invalid_relations,
+  #           :recalculate_attributes_for_former_parent
 
   after_destroy :update_parent_attributes
 
@@ -413,9 +412,9 @@ class WorkPackage < ActiveRecord::Base
   # https://github.com/collectiveidea/awesome_nested_set/blob/master/lib/awesome_nested_set/model.rb#L135
   # The OP workflow however requires to first create a WP before children can
   # be assigned to it. Unpersisted WPs are hence always leaves.
-  def leaf?
-    new_record? || super
-  end
+  #def leaf?
+  #  new_record? || super
+  #end
 
   # Returns an array of status that user is able to apply
   def new_statuses_allowed_to(user, include_default = false)
@@ -715,7 +714,7 @@ class WorkPackage < ActiveRecord::Base
     # 0 and nil shall be considered the same for estimated hours
     average = leaves.where('estimated_hours > 0').average(:estimated_hours).to_f
 
-    average == 0 ? 1 : average
+    average.zero? ? 1 : average
   end
 
   def leaf_done_ratio_sum(average_estimated_hours)

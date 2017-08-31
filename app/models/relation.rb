@@ -31,6 +31,8 @@ class Relation < ActiveRecord::Base
   belongs_to :from, class_name: 'WorkPackage', foreign_key: 'from_id'
   belongs_to :to, class_name: 'WorkPackage', foreign_key: 'to_id'
 
+  include WorkPackage::Dag::Edge
+
   scope :of_work_package, ->(work_package) { where('from_id = ? OR to_id = ?', work_package, work_package) }
 
   TYPE_RELATES      = 'relates'.freeze

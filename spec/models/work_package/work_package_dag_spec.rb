@@ -35,6 +35,12 @@ describe WorkPackage, type: :model do
   let(:other_work_package) do
     FactoryGirl.create(:work_package)
   end
+  let(:another_work_package) do
+    FactoryGirl.create(:work_package)
+  end
+  let(:yet_another_work_package) do
+    FactoryGirl.create(:work_package)
+  end
   let(:child_work_package) do
     wp = FactoryGirl.create(:work_package)
 
@@ -55,12 +61,16 @@ describe WorkPackage, type: :model do
                        relation_type: 'hierarchy',
                        depth: 1)
 
-    # TODO: place generation of closure into production code
+    wp
+  end
+  let(:grandgrandchild_work_package) do
+    wp = FactoryGirl.create(:work_package)
+
     FactoryGirl.create(:relation,
-                       from: work_package,
+                       from: grandchild_work_package,
                        to: wp,
                        relation_type: 'hierarchy',
-                       depth: 2)
+                       depth: 1)
 
     wp
   end
@@ -83,13 +93,6 @@ describe WorkPackage, type: :model do
                        to: parent_work_package,
                        relation_type: 'hierarchy',
                        depth: 1)
-
-    # TODO: place generation of closure into production code
-    FactoryGirl.create(:relation,
-                       from: wp,
-                       to: work_package,
-                       relation_type: 'hierarchy',
-                       depth: 2)
 
     wp
   end
@@ -286,6 +289,168 @@ describe WorkPackage, type: :model do
       it 'is true' do
         expect(work_package)
           .to be_child
+      end
+    end
+  end
+
+  describe '#parent=' do
+    context 'on assigning via method' do
+      before do
+        work_package.parent = other_work_package
+      end
+
+      it 'assigns the parent' do
+        expect(work_package.parent)
+          .to eql other_work_package
+      end
+    end
+
+    context 'on assigning a hash to the attributes' do
+      before do
+        work_package.attributes = { parent: other_work_package }
+      end
+
+      it 'assigns the parent when using a hash' do
+        expect(work_package.parent)
+          .to eql other_work_package
+      end
+    end
+
+    context 'on creation' do
+      let(:work_package) do
+        WorkPackage.create! subject: 'blubs',
+                            priority: other_work_package.priority,
+                            status: other_work_package.status,
+                            author: other_work_package.author,
+                            project: other_work_package.project,
+                            type: other_work_package.type,
+                            parent: other_work_package
+      end
+
+      before do
+        work_package
+      end
+
+      it 'assigns the parent' do
+        expect(work_package.parent)
+          .to eql other_work_package
+      end
+    end
+
+    context "on adding a work package as a parent's parent" do
+      before do
+        work_package.parent = other_work_package
+        other_work_package.parent = another_work_package
+
+        work_package.reload
+      end
+
+      it 'builds the complete hierarchy' do
+        expect(work_package.ancestors)
+          .to match_array([other_work_package, another_work_package])
+      end
+    end
+
+    context "on adding a work package as a child's child" do
+      before do
+        other_work_package.parent = work_package
+        another_work_package.parent = other_work_package
+
+        work_package.reload
+      end
+
+      it 'builds the complete hierarchy' do
+        expect(work_package.descendants)
+          .to match_array([other_work_package, another_work_package])
+      end
+    end
+
+    context "on adding a child as a parent of a work package with a child" do
+      before do
+        other_work_package.parent = work_package
+        yet_another_work_package.parent = another_work_package
+
+        another_work_package.parent = other_work_package
+      end
+
+      it 'builds the complete hierarchy' do
+        expect(work_package.descendants)
+          .to match_array([other_work_package, another_work_package, yet_another_work_package])
+      end
+    end
+
+    context 'on removing a parent (assign nil)' do
+      before do
+        work_package
+        child_work_package
+
+        child_work_package.parent = nil
+      end
+
+      it 'leads to the former parent no longer having children' do
+        expect(work_package.children)
+          .to be_empty
+      end
+
+      it 'leads to the former parent no longer having descendants' do
+        expect(work_package.descendants)
+          .to be_empty
+      end
+    end
+
+    context 'on assigning nil to a parent' do
+      before do
+        work_package
+        child_work_package
+        grandchild_work_package
+
+        child_work_package.parent = nil
+      end
+
+      it 'leads to the former parent no longer having children' do
+        expect(work_package.children)
+          .to be_empty
+      end
+
+      it 'leads to the former parent no longer having descendants' do
+        expect(work_package.descendants)
+          .to be_empty
+      end
+    end
+
+    context "on assigning nil to a parent that had a child as it's parent" do
+      before do
+        work_package
+        child_work_package
+        grandchild_work_package
+        grandgrandchild_work_package
+
+        grandchild_work_package.parent = nil
+      end
+
+      it 'leads to the former parent no longer having children' do
+        expect(child_work_package.children)
+          .to be_empty
+      end
+
+      it 'leads to the former parent no longer having descendants' do
+        expect(child_work_package.descendants)
+          .to be_empty
+      end
+
+      it 'leads to the child no longer having ancestors apart from the parent' do
+        expect(grandgrandchild_work_package.ancestors)
+          .to match_array([grandchild_work_package])
+      end
+
+      it 'leads to the child no longer having ancestors apart from the parent' do
+        expect(grandgrandchild_work_package.ancestors)
+          .to match_array([grandchild_work_package])
+      end
+
+      it 'leads to the upperchild no longer having descendants' do
+        expect(child_work_package.descendants)
+          .to be_empty
       end
     end
   end

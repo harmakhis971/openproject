@@ -35,7 +35,7 @@ class WorkPackage < ActiveRecord::Base
   include WorkPackage::AskBeforeDestruction
   include WorkPackage::TimeEntries
   include WorkPackage::Ancestors
-  include WorkPackage::Dag
+  include WorkPackage::Dag::Node
 
   include OpenProject::Journal::AttachmentHelper
 

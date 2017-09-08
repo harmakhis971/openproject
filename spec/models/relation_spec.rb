@@ -1,4 +1,5 @@
 #-- encoding: UTF-8
+
 #-- copyright
 # OpenProject is a project management system.
 # Copyright (C) 2012-2017 the OpenProject Foundation (OPF)
@@ -29,24 +30,32 @@
 require 'spec_helper'
 
 describe Relation, type: :model do
-  let(:from) { FactoryGirl.create(:work_package) }
-  let(:to) { FactoryGirl.create(:work_package) }
+  let(:ancestor) { FactoryGirl.create(:work_package) }
+  let(:descendant) { FactoryGirl.create(:work_package) }
   let(:type) { 'relates' }
-  let(:relation) { FactoryGirl.build(:relation, from: from, to: to, relation_type: type) }
+  let(:relation) { FactoryGirl.build(:relation, ancestor: ancestor, descendant: descendant, relation_type: type) }
 
   describe 'all relation types' do
-    Relation::TYPES.each do |_, type_hash|
-      let(:type) { type_hash[:sym] }
+    Relation::TYPES.each do |key, type_hash|
+      let(:type) { key }
+      let(:column_name) { type_hash[:sym] }
       let(:reversed) { type_hash[:reverse] }
 
-      it 'should create' do
-        expect(relation.save).to eq(true)
+      before do
+        relation.save!
+      end
 
+      it "sets the correct type for for '#{key}'" do
         if reversed.nil?
           expect(relation.relation_type).to eq(type)
         else
           expect(relation.relation_type).to eq(reversed)
         end
+      end
+
+      it "sets the correct column for '#{key}' to 1" do
+        expect(relation.send(column_name))
+          .to eql 1
       end
     end
   end
@@ -58,8 +67,8 @@ describe Relation, type: :model do
       relation.reload
 
       expect(relation.relation_type).to eq(Relation::TYPE_PRECEDES)
-      expect(relation.from).to eq(to)
-      expect(relation.to).to eq(from)
+      expect(relation.ancestor).to eq(descendant)
+      expect(relation.descendant).to eq(ancestor)
     end
 
     it 'should fail validation with invalid date and does not reverse type' do
@@ -68,16 +77,21 @@ describe Relation, type: :model do
       expect(relation.save).to eq(false)
 
       expect(relation.relation_type).to eq(Relation::TYPE_FOLLOWS)
-      expect(relation.from).to eq(from)
-      expect(relation.to).to eq(to)
+      expect(relation.ancestor).to eq(ancestor)
+      expect(relation.descendant).to eq(descendant)
     end
   end
 
-  describe 'without :to and with delay set' do
-    let(:relation) { FactoryGirl.build(:relation, from: from, relation_type: type, delay: 1) }
+  describe 'without descendant and with delay set' do
+    let(:relation) do
+      FactoryGirl.build(:relation,
+                        ancestor: ancestor,
+                        relation_type: type,
+                        delay: 1)
+    end
     let(:type) { Relation::TYPE_PRECEDES }
 
-    it 'should set dates of target without to' do
+    it 'should set dates of target without descendant' do
       expect(relation.set_dates_of_target).to be_nil
     end
   end
@@ -85,16 +99,16 @@ describe Relation, type: :model do
   describe '.visible' do
     let(:user) { FactoryGirl.create(:user) }
     let(:role) { FactoryGirl.create(:role, permissions: [:view_work_packages]) }
-    let(:member_project_to) do
+    let(:member_project_descendant) do
       FactoryGirl.create(:member,
-                         project: to.project,
+                         project: descendant.project,
                          user: user,
                          roles: [role])
     end
 
-    let(:member_project_from) do
+    let(:member_project_ancestor) do
       FactoryGirl.create(:member,
-                         project: from.project,
+                         project: ancestor.project,
                          user: user,
                          roles: [role])
     end
@@ -105,8 +119,8 @@ describe Relation, type: :model do
 
     context 'user can see both work packages' do
       before do
-        member_project_to
-        member_project_from
+        member_project_descendant
+        member_project_ancestor
       end
 
       it 'returns the relation' do
@@ -115,9 +129,9 @@ describe Relation, type: :model do
       end
     end
 
-    context 'user can see only the from work packages' do
+    context 'user can see only the ancestor work packages' do
       before do
-        member_project_from
+        member_project_ancestor
       end
 
       it 'does not return the relation' do
@@ -128,7 +142,7 @@ describe Relation, type: :model do
 
     context 'user can see only the to work packages' do
       before do
-        member_project_to
+        member_project_descendant
       end
 
       it 'does not return the relation' do
@@ -138,28 +152,29 @@ describe Relation, type: :model do
     end
   end
 
+  # TODO: move to typed_dag
   describe 'it should validate circular dependency' do
     let(:otherwp) { FactoryGirl.create(:work_package) }
-    let(:relation) {
-      FactoryGirl.build(:relation, from: from, to: to, relation_type: Relation::TYPE_PRECEDES)
-    }
-    let(:relation2) {
-      FactoryGirl.build(:relation, from: to, to: otherwp, relation_type: Relation::TYPE_PRECEDES)
-    }
+    let(:relation) do
+      FactoryGirl.build(:relation, ancestor: ancestor, descendant: descendant, relation_type: Relation::TYPE_PRECEDES)
+    end
+    let(:relation2) do
+      FactoryGirl.build(:relation, ancestor: descendant, descendant: otherwp, relation_type: Relation::TYPE_PRECEDES)
+    end
 
-    let(:invalid_precedes_relation) {
-      FactoryGirl.build(:relation, from: otherwp, to: from, relation_type: Relation::TYPE_PRECEDES)
-    }
+    let(:invalid_precedes_relation) do
+      FactoryGirl.build(:relation, ancestor: otherwp, descendant: ancestor, relation_type: Relation::TYPE_PRECEDES)
+    end
 
-    let(:invalid_follows_relation) {
-      FactoryGirl.build(:relation, from: from, to: otherwp, relation_type: Relation::TYPE_FOLLOWS)
-    }
+    let(:invalid_follows_relation) do
+      FactoryGirl.build(:relation, ancestor: ancestor, descendant: otherwp, relation_type: Relation::TYPE_FOLLOWS)
+    end
 
     it 'prevents invalid precedes relations' do
       expect(relation.save).to eq(true)
       expect(relation2.save).to eq(true)
-      from.reload
-      to.reload
+      ancestor.reload
+      descendant.reload
       otherwp.reload
       expect(invalid_precedes_relation.save).to eq(false)
       expect(invalid_precedes_relation.errors[:base]).not_to be_empty
@@ -168,8 +183,8 @@ describe Relation, type: :model do
     it 'prevents invalid follows relations' do
       expect(relation.save).to eq(true)
       expect(relation2.save).to eq(true)
-      from.reload
-      to.reload
+      ancestor.reload
+      descendant.reload
       otherwp.reload
       expect(invalid_follows_relation.save).to eq(false)
       expect(invalid_follows_relation.errors[:base]).not_to be_empty

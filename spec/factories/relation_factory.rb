@@ -29,7 +29,7 @@
 FactoryGirl.define do
   factory :relation do
     ancestor factory: :work_package
-    descendant do FactoryGirl.build(:work_package, project: from.project) end
+    descendant { FactoryGirl.build(:work_package, project: ancestor.project) }
     relation_type 'relates' # "relates", "duplicates", "duplicated", "blocks", "blocked", "precedes", "follows"
     delay nil
     description nil

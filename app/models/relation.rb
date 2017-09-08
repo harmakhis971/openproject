@@ -28,13 +28,14 @@
 #++
 
 class Relation < ActiveRecord::Base
-  #include WorkPackage::Dag::Edge
   include TypedDag::Edge
-
   acts_as_dag_edge node_class_name: 'WorkPackage',
                    ancestor_column: 'from_id',
                    descendant_column: 'to_id',
-                   type_column: 'relation_type'
+                   types: { hierarchy: { up: { name: :parent, limit: 1 },
+                                         down: :children,
+                                         all_up: :ancestors,
+                                         all_down: :descendants } }
 
   scope :of_work_package, ->(work_package) { where('from_id = ? OR to_id = ?', work_package, work_package) }
 
@@ -93,15 +94,29 @@ class Relation < ActiveRecord::Base
     }
   }.freeze
 
-  validates_presence_of :ancestor, :descendant, :relation_type
-  validates_inclusion_of :relation_type, in: TYPES.keys + ['hierarchy']
+  #validates_presence_of :ancestor, :descendant#, :relation_type
+  #validates_inclusion_of :relation_type, in: TYPES.keys + ['hierarchy']
   validates_numericality_of :delay, allow_nil: true
-  validates_uniqueness_of :to_id, scope: :from_id
+  #validates_uniqueness_of :to_id, scope: :from_id
 
   validate :validate_sanity_of_relation,
            :validate_no_circular_dependency
 
   before_save :update_schedule
+
+  attr_accessor :relation_type
+
+  def relation_type=(type)
+    column = if TYPES.key?(type) && TYPES[type][:reverse]
+               TYPES[type][:reverse]
+             else
+               type
+             end
+
+    send("#{column}=", 1)
+
+    @relation_type = type
+  end
 
   def self.visible(user = User.current)
     where(from_id: WorkPackage.visible(user))

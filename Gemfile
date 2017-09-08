@@ -83,7 +83,7 @@ gem 'sys-filesystem', '~> 1.1.4', require: false
 
 gem 'bcrypt', '~> 3.1.6'
 
-gem 'typed_dag', path: '~/Documents/b/reddev/typed_dag'
+gem 'typed_dag', git: 'https://github.com/opf/typed_dag.git'
 
 gem 'multi_json', '~> 1.12.1'
 gem 'oj', '~> 3.3.2'

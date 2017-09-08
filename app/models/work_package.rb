@@ -40,7 +40,10 @@ class WorkPackage < ActiveRecord::Base
   acts_as_dag_node edge_class_name: 'Relation',
                    ancestor_column: 'from_id',
                    descendant_column: 'to_id',
-                   type_column: 'relation_type'
+                   types: { hierarchy: { up: { name: :parent, limit: 1 },
+                                         down: :children,
+                                         all_up: :ancestors,
+                                         all_down: :descendants } }
 
   include OpenProject::Journal::AttachmentHelper
 
@@ -128,18 +131,18 @@ class WorkPackage < ActiveRecord::Base
 
   acts_as_watchable
 
-  before_save :store_former_parent_id
+  #before_save :store_former_parent_id
 
   #include OpenProject::NestedSet::WithRootIdScope
 
-  after_save :reschedule_following_work_packages,
-             :update_parent_attributes
+  #after_save :reschedule_following_work_packages,
+  #           :update_parent_attributes
 
   # TODO: adapt to have them called
   #after_move :remove_invalid_relations,
   #           :recalculate_attributes_for_former_parent
 
-  after_destroy :update_parent_attributes
+  #after_destroy :update_parent_attributes
 
   # >>> issues.rb >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   before_create :default_assign
@@ -227,7 +230,7 @@ class WorkPackage < ActiveRecord::Base
                 name: JournalizedProcs.event_name,
                 url: JournalizedProcs.event_url
 
-  register_on_journal_formatter(:id, 'parent_id')
+  #register_on_journal_formatter(:id, 'parent_id')
   register_on_journal_formatter(:fraction, 'estimated_hours')
   register_on_journal_formatter(:decimal, 'done_ratio')
   register_on_journal_formatter(:diff, 'description')
@@ -235,7 +238,8 @@ class WorkPackage < ActiveRecord::Base
   register_on_journal_formatter(:custom_field, /custom_fields_\d+/)
 
   # Joined
-  register_on_journal_formatter :named_association, :parent_id, :project_id,
+  #register_on_journal_formatter :named_association, :parent_id, :project_id,
+  register_on_journal_formatter :named_association, :project_id,
                                 :status_id, :type_id,
                                 :assigned_to_id, :priority_id,
                                 :category_id, :fixed_version_id,
@@ -679,9 +683,9 @@ class WorkPackage < ActiveRecord::Base
     end
   end
 
-  def update_parent_attributes
-    recalculate_attributes_for(parent_id) if parent_id.present?
-  end
+  #def update_parent_attributes
+  #  recalculate_attributes_for(parent_id) if parent_id.present?
+  #end
 
   def inherit_dates_from_children
     unless children.empty?
@@ -739,10 +743,10 @@ class WorkPackage < ActiveRecord::Base
     self.estimated_hours = nil if estimated_hours == 0.0
   end
 
-  def store_former_parent_id
-    @former_parent_id = parent_id_changed? ? parent_id_was : false
-    true # force callback to return true
-  end
+  #def store_former_parent_id
+  #  @former_parent_id = parent_id_changed? ? parent_id_was : false
+  #  true # force callback to return true
+  #end
 
   def remove_invalid_relations
     # delete invalid relations of all descendants
@@ -789,9 +793,9 @@ class WorkPackage < ActiveRecord::Base
     end
   end
 
-  def recalculate_attributes_for_former_parent
-    recalculate_attributes_for(@former_parent_id) if @former_parent_id
-  end
+  #def recalculate_attributes_for_former_parent
+  #  recalculate_attributes_for(@former_parent_id) if @former_parent_id
+  #end
 
   def reload_lock_and_timestamps
     reload(select: [:lock_version, :created_at, :updated_at])

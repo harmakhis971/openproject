@@ -78,6 +78,13 @@ GIT
       rails (>= 5.0.0, < 5.1)
 
 GIT
+  remote: https://github.com/opf/typed_dag.git
+  revision: ab8fa81f219a3693bbde76b588fda2734b7f43cd
+  specs:
+    typed_dag (0.1.0)
+      rails (>= 5.0.4)
+
+GIT
   remote: https://github.com/rspec/rspec-activemodel-mocks
   revision: 5cd4c9d552bcc75d60ea4b7dda96e7377197ab8d
   specs:
@@ -85,12 +92,6 @@ GIT
       activemodel (>= 3.0)
       activesupport (>= 3.0)
       rspec-mocks (>= 2.99, < 4.0)
-
-PATH
-  remote: ../typed_dag
-  specs:
-    typed_dag (0.1.0)
-      rails (>= 5.0.4)
 
 GEM
   remote: https://rubygems.org/

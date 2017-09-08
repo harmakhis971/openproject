@@ -35,7 +35,12 @@ class WorkPackage < ActiveRecord::Base
   include WorkPackage::AskBeforeDestruction
   include WorkPackage::TimeEntries
   include WorkPackage::Ancestors
-  include WorkPackage::Dag::Node
+
+  include TypedDag::Node
+  acts_as_dag_node edge_class_name: 'Relation',
+                   ancestor_column: 'from_id',
+                   descendant_column: 'to_id',
+                   type_column: 'relation_type'
 
   include OpenProject::Journal::AttachmentHelper
 
@@ -338,14 +343,15 @@ class WorkPackage < ActiveRecord::Base
   def all_dependent_packages(except = [])
     except << self
     dependencies = []
-    relations.includes(:from, :to).each do |relation|
-      work_package = relation.canonical_to
+    # TODO: reimplement
+    #relations.includes(:from, :to).each do |relation|
+    #  work_package = relation.canonical_to
 
-      if work_package && !except.include?(work_package)
-        dependencies << work_package
-        dependencies += work_package.all_dependent_packages(except)
-      end
-    end
+    #  if work_package && !except.include?(work_package)
+    #    dependencies << work_package
+    #    dependencies += work_package.all_dependent_packages(except)
+    #  end
+    #end
     dependencies
   end
 

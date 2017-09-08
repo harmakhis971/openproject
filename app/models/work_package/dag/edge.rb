@@ -32,6 +32,9 @@ module WorkPackage::Dag::Edge
   extend ActiveSupport::Concern
 
   included do
+    belongs_to :from, class_name: 'WorkPackage', foreign_key: 'from_id'
+    belongs_to :to, class_name: 'WorkPackage', foreign_key: 'to_id'
+
     after_create :add_closures
     before_destroy :memorize_closures_to_destroy
     after_destroy :truncate_closures

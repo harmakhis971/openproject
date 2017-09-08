@@ -28,10 +28,13 @@
 #++
 
 class Relation < ActiveRecord::Base
-  belongs_to :from, class_name: 'WorkPackage', foreign_key: 'from_id'
-  belongs_to :to, class_name: 'WorkPackage', foreign_key: 'to_id'
+  #include WorkPackage::Dag::Edge
+  include TypedDag::Edge
 
-  include WorkPackage::Dag::Edge
+  acts_as_dag_edge node_class_name: 'WorkPackage',
+                   ancestor_column: 'from_id',
+                   descendant_column: 'to_id',
+                   type_column: 'relation_type'
 
   scope :of_work_package, ->(work_package) { where('from_id = ? OR to_id = ?', work_package, work_package) }
 
@@ -90,7 +93,7 @@ class Relation < ActiveRecord::Base
     }
   }.freeze
 
-  validates_presence_of :from, :to, :relation_type
+  validates_presence_of :ancestor, :descendant, :relation_type
   validates_inclusion_of :relation_type, in: TYPES.keys + ['hierarchy']
   validates_numericality_of :delay, allow_nil: true
   validates_uniqueness_of :to_id, scope: :from_id
@@ -106,7 +109,7 @@ class Relation < ActiveRecord::Base
   end
 
   def other_work_package(work_package)
-    from_id == work_package.id ? to : from
+    from_id == work_package.id ? descendant : ancestor
   end
 
   # Returns the relation type for +work_package+
@@ -141,14 +144,14 @@ class Relation < ActiveRecord::Base
 
   def set_dates_of_target
     soonest_start = successor_soonest_start
-    if soonest_start && to
-      to.reschedule_after(soonest_start)
+    if soonest_start && descendant
+      descendant.reschedule_after(soonest_start)
     end
   end
 
   def successor_soonest_start
-    if (TYPE_PRECEDES == relation_type) && delay && from && (from.start_date || from.due_date)
-      (from.due_date || from.start_date) + 1 + delay
+    if (TYPE_PRECEDES == relation_type) && delay && ancestor && (ancestor.start_date || ancestor.due_date)
+      (ancestor.due_date || ancestor.start_date) + 1 + delay
     end
   end
 
@@ -163,21 +166,21 @@ class Relation < ActiveRecord::Base
     self[:delay]
   end
 
-  def canonical_to
+  def canonical_descendant
     if TYPES.key?(relation_type) &&
        TYPES[relation_type][:reverse]
-      from
+      ancestor
     else
-      to
+      descendant
     end
   end
 
-  def canonical_from
+  def canonical_ancestor
     if TYPES.key?(relation_type) &&
        TYPES[relation_type][:reverse]
-      to
+      descendant
     else
-      from
+      ancestor
     end
   end
 
@@ -191,7 +194,7 @@ class Relation < ActiveRecord::Base
   end
 
   def circular_dependency?
-    canonical_to.all_dependent_packages.include? canonical_from
+    canonical_descendant.all_dependent_packages.include? canonical_ancestor
   end
 
   def shared_hierarchy?
@@ -202,16 +205,16 @@ class Relation < ActiveRecord::Base
   private
 
   def validate_sanity_of_relation
-    return unless from && to
+    return unless ancestor && descendant
 
     errors.add :to_id, :invalid if from_id == to_id
-    errors.add :to_id, :not_same_project unless from.project_id == to.project_id ||
+    errors.add :to_id, :not_same_project unless ancestor.project_id == descendant.project_id ||
                                                 Setting.cross_project_work_package_relations?
     errors.add :base, :cant_link_a_work_package_with_a_descendant if shared_hierarchy?
   end
 
   def validate_no_circular_dependency
-    return unless from && to
+    return unless ancestor && descendant
 
     if !(changed & ['from_id', 'to_id']).empty? && circular_dependency?
       errors.add :base, :circular_dependency
@@ -221,9 +224,9 @@ class Relation < ActiveRecord::Base
   # Reverses the relation if needed so that it gets stored in the proper way
   def reverse_if_needed
     if TYPES.key?(relation_type) && TYPES[relation_type][:reverse]
-      work_package_tmp = to
-      self.to = from
-      self.from = work_package_tmp
+      work_package_tmp = descendant
+      self.descendant = ancestor
+      self.ancestor = work_package_tmp
       self.relation_type = TYPES[relation_type][:reverse]
     end
   end

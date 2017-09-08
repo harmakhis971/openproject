@@ -86,6 +86,12 @@ GIT
       activesupport (>= 3.0)
       rspec-mocks (>= 2.99, < 4.0)
 
+PATH
+  remote: ../typed_dag
+  specs:
+    typed_dag (0.1.0)
+      rails (>= 5.0.4)
+
 GEM
   remote: https://rubygems.org/
   specs:
@@ -726,6 +732,7 @@ DEPENDENCIES
   thin (~> 1.7.2)
   timecop (~> 0.9.0)
   transactional_lock!
+  typed_dag!
   tzinfo-data (~> 1.2017.2)
   unicorn
   unicorn-worker-killer

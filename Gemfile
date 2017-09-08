@@ -83,6 +83,8 @@ gem 'sys-filesystem', '~> 1.1.4', require: false
 
 gem 'bcrypt', '~> 3.1.6'
 
+gem 'typed_dag', path: '~/Documents/b/reddev/typed_dag'
+
 gem 'multi_json', '~> 1.12.1'
 gem 'oj', '~> 3.3.2'
 # We rely on this specific version, which is the latest as of now (end of 2016),

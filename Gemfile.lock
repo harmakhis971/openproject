@@ -79,7 +79,7 @@ GIT
 
 GIT
   remote: https://github.com/opf/typed_dag.git
-  revision: ab8fa81f219a3693bbde76b588fda2734b7f43cd
+  revision: a9c8a560eebbb668fca42dd761bfa228cbb6ac00
   specs:
     typed_dag (0.1.0)
       rails (>= 5.0.4)

@@ -36,15 +36,6 @@ class WorkPackage < ActiveRecord::Base
   include WorkPackage::TimeEntries
   include WorkPackage::Ancestors
 
-  include TypedDag::Node
-  acts_as_dag_node edge_class_name: 'Relation',
-                   ancestor_column: 'from_id',
-                   descendant_column: 'to_id',
-                   types: { hierarchy: { up: { name: :parent, limit: 1 },
-                                         down: :children,
-                                         all_up: :ancestors,
-                                         all_down: :descendants } }
-
   include OpenProject::Journal::AttachmentHelper
 
   DONE_RATIO_OPTIONS = %w(field status disabled).freeze

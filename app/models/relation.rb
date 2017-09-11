@@ -28,14 +28,6 @@
 #++
 
 class Relation < ActiveRecord::Base
-  include TypedDag::Edge
-  acts_as_dag_edge node_class_name: 'WorkPackage',
-                   ancestor_column: 'from_id',
-                   descendant_column: 'to_id',
-                   types: { hierarchy: { up: { name: :parent, limit: 1 },
-                                         down: :children,
-                                         all_up: :ancestors,
-                                         all_down: :descendants } }
 
   scope :of_work_package, ->(work_package) { where('from_id = ? OR to_id = ?', work_package, work_package) }
 

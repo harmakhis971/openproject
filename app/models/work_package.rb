@@ -357,7 +357,7 @@ class WorkPackage < ActiveRecord::Base
 
   def soonest_start
     @soonest_start ||=
-      self_and_ancestors.includes(relations_to: :from)
+      self_and_ancestors.includes(relations_to: :ancestor)
                         .where(relations: { relation_type: Relation::TYPE_PRECEDES })
                         .map(&:relations_to)
                         .flatten

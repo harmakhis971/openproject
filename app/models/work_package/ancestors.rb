@@ -63,9 +63,15 @@ module WorkPackage::Ancestors
     end
 
     def results
-      with_work_package_ancestors
-        .map { |wp| [wp.id, wp.ancestors] }
-        .to_h
+      default = Hash.new do |hash, id|
+        hash[id] = []
+      end
+
+      results = with_work_package_ancestors
+                .map { |wp| [wp.id, wp.ancestors] }
+                .to_h
+
+      default.merge(results)
     end
 
     private

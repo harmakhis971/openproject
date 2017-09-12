@@ -150,7 +150,7 @@ module API
         end
 
         def reverse_type
-          Relation::TYPES[represented.relation_type][:sym]
+          represented.reverse_type
         end
 
         def reverse_type=(reverse_type)

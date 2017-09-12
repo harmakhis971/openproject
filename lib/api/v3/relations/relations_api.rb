@@ -40,7 +40,9 @@ module API
 
         resources :relations do
           get do
-            scope = Relation.includes(::API::V3::Relations::RelationRepresenter.to_eager_load)
+            scope = Relation
+                    .direct
+                    .includes(::API::V3::Relations::RelationRepresenter.to_eager_load)
 
             ::API::V3::Utilities::ParamsToQuery.collection_response(scope,
                                                                     current_user,

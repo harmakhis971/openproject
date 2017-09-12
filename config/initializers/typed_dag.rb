@@ -1,4 +1,5 @@
 #-- encoding: UTF-8
+
 #-- copyright
 # OpenProject is a project management system.
 # Copyright (C) 2012-2017 the OpenProject Foundation (OPF)
@@ -31,7 +32,33 @@ TypedDag::Configuration.set node_class_name: 'WorkPackage',
                             edge_class_name: 'Relation',
                             ancestor_column: 'from_id',
                             descendant_column: 'to_id',
-                            types: { hierarchy: { up: { name: :parent, limit: 1 },
-                                                  down: :children,
-                                                  all_up: :ancestors,
-                                                  all_down: :descendants } }
+                            types: {
+                              hierarchy: { up: { name: :parent, limit: 1 },
+                                           down: :children,
+                                           all_up: :ancestors,
+                                           all_down: :descendants },
+                              relates: { up: :related_to,
+                                         down: :relates_to,
+                                         all_up: :all_related_to,
+                                         all_down: :all_relates_to },
+                              duplicates: { up: :duplicated_by,
+                                            down: :duplicates,
+                                            all_up: :all_related_to,
+                                            all_down: :all_relates_to },
+                              precedes: { up: :follows,
+                                          down: :precedes,
+                                          all_up: :all_follows,
+                                          all_down: :all_precedes },
+                              blocks: { up: :blocked_by,
+                                        down: :blocks,
+                                        all_up: :all_blocked_by,
+                                        all_down: :all_blocks },
+                              includes: { up: :part_of,
+                                          down: :includes,
+                                          all_up: :all_part_of,
+                                          all_down: :all_includes },
+                              requires: { up: :required_by,
+                                          down: :requires,
+                                          all_up: :all_required_by,
+                                          all_down: :all_requires }
+                            }

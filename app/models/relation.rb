@@ -28,8 +28,8 @@
 #++
 
 class Relation < ActiveRecord::Base
-
-  scope :of_work_package, ->(work_package) { where('from_id = ? OR to_id = ?', work_package, work_package) }
+  scope :of_work_package,
+        ->(work_package) { where('from_id = ? OR to_id = ?', work_package, work_package) }
 
   TYPE_RELATES      = 'relates'.freeze
   TYPE_DUPLICATES   = 'duplicates'.freeze
@@ -98,13 +98,27 @@ class Relation < ActiveRecord::Base
 
   attr_accessor :relation_type
 
+  def self.relation_column(type)
+    if TYPES.key?(type) && TYPES[type][:reverse]
+      TYPES[type][:reverse]
+    else
+      type
+    end
+  end
+
+  def self.visible(user = User.current)
+    where(from_id: WorkPackage.visible(user))
+      .where(to_id: WorkPackage.visible(user))
+  end
+
+  # TODO: move to typed_dag
+  def self.direct
+    where("#{_dag_options.type_columns.join(' + ')} = 1")
+  end
+
   def relation_type=(type)
     if type
-      column = if TYPES.key?(type) && TYPES[type][:reverse]
-                 TYPES[type][:reverse]
-               else
-                 type
-               end
+      column = self.class.relation_column(type)
 
       send("#{column}=", 1)
     end
@@ -129,11 +143,6 @@ class Relation < ActiveRecord::Base
     end
   end
 
-  def self.visible(user = User.current)
-    where(from_id: WorkPackage.visible(user))
-      .where(to_id: WorkPackage.visible(user))
-  end
-
   def other_work_package(work_package)
     from_id == work_package.id ? descendant : ancestor
   end
@@ -147,6 +156,10 @@ class Relation < ActiveRecord::Base
         TYPES[relation_type][:sym]
       end
     end
+  end
+
+  def reverse_type
+    Relation::TYPES[relation_type] && Relation::TYPES[relation_type][:sym]
   end
 
   def label_for(work_package)
@@ -226,10 +239,6 @@ class Relation < ActiveRecord::Base
   def shared_hierarchy?
     # TODO: reimplement
     # from.is_descendant_of?(to) || from.is_ancestor_of?(to)
-  end
-
-  def reverse_type
-    Relation::TYPES[relation_type][:sym]
   end
 
   private

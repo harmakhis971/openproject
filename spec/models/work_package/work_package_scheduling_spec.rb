@@ -182,8 +182,8 @@ describe WorkPackage, type: :model do
       let(:follows_relation) do
         FactoryGirl.create(:relation,
                            relation_type: Relation::TYPE_PRECEDES,
-                           from: work_package1,
-                           to: work_package2,
+                           ancestor: work_package1,
+                           descendant: work_package2,
                            delay: delay)
       end
 
@@ -399,8 +399,8 @@ describe WorkPackage, type: :model do
           let(:follows_relation2) do
             FactoryGirl.create(:relation,
                                relation_type: Relation::TYPE_PRECEDES,
-                               from: work_package3,
-                               to: work_package2)
+                               ancestor: work_package3,
+                               descendant: work_package2)
           end
 
           before do
@@ -583,8 +583,8 @@ describe WorkPackage, type: :model do
         let(:blocks_relation) do
           FactoryGirl.create(:relation,
                              relation_type: relation_type,
-                             from: work_package1,
-                             to: work_package2)
+                             ancestor: work_package1,
+                             descendant: work_package2)
         end
 
         context 'upon relationship generation' do

@@ -57,8 +57,8 @@ describe ::API::V3::Relations::RelationRepresenter, type: :request do
   end
   let(:relation) do
     FactoryGirl.create :relation,
-                       from: from,
-                       to: to,
+                       ancestor: from,
+                       descendant: to,
                        relation_type: type,
                        description: description,
                        delay: delay
@@ -88,8 +88,8 @@ describe ::API::V3::Relations::RelationRepresenter, type: :request do
     it 'should have created the relation correctly' do
       rel = described_class.new(Relation.new, current_user: user).from_json response.body
 
-      expect(rel.from).to eq from
-      expect(rel.to).to eq to
+      expect(rel.ancestor).to eq from
+      expect(rel.descendant).to eq to
       expect(rel.relation_type).to eq type
       expect(rel.description).to eq description
       expect(rel.delay).to eq delay
@@ -276,8 +276,8 @@ describe ::API::V3::Relations::RelationRepresenter, type: :request do
       invisible_wp = FactoryGirl.create(:work_package)
 
       FactoryGirl.create :relation,
-                         from: from,
-                         to: invisible_wp
+                         ancestor: from,
+                         descendant: invisible_wp
     end
     let(:other_visible_work_package) do
       FactoryGirl.create(:work_package,
@@ -286,8 +286,8 @@ describe ::API::V3::Relations::RelationRepresenter, type: :request do
     end
     let(:other_visible_relation) do
       FactoryGirl.create :relation,
-                         from: to,
-                         to: other_visible_work_package
+                         ancestor: to,
+                         descendant: other_visible_work_package
     end
 
     let(:members) { [member_project_to, member_project_from] }

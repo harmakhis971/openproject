@@ -120,7 +120,7 @@ class Relation < ActiveRecord::Base
     if type
       column = self.class.relation_column(type)
 
-      send("#{column}=", 1)
+      send("#{column}=", 1) if column.present?
     end
 
     @relation_type = type

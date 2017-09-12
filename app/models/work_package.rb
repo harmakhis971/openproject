@@ -127,11 +127,11 @@ class WorkPackage < ActiveRecord::Base
   #include OpenProject::NestedSet::WithRootIdScope
 
   #after_save :reschedule_following_work_packages,
-  #           :update_parent_attributes
+  after_save :update_parent_attributes
 
   # TODO: adapt to have them called
   #after_move :remove_invalid_relations,
-  #           :recalculate_attributes_for_former_parent
+  #after_move :recalculate_attributes_for_former_parent
 
   #after_destroy :update_parent_attributes
 
@@ -647,6 +647,11 @@ class WorkPackage < ActiveRecord::Base
     ).to_a
   end
 
+  # TODO: check why alias_method does not work
+  def leaves
+    hierarchy_leaves
+  end
+
   protected
 
   def recalculate_attributes_for(work_package_id)
@@ -674,9 +679,9 @@ class WorkPackage < ActiveRecord::Base
     end
   end
 
-  #def update_parent_attributes
-  #  recalculate_attributes_for(parent_id) if parent_id.present?
-  #end
+  def update_parent_attributes
+    recalculate_attributes_for(parent.id) if parent.present?
+  end
 
   def inherit_dates_from_children
     unless children.empty?

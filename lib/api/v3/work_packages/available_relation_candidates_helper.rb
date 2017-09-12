@@ -58,7 +58,7 @@ module API
 
         def illegal_relation?(type, from, to)
           if type != 'parent'
-            rel = Relation.new(relation_type: type, from: from, to: to)
+            rel = Relation.new(relation_type: type, ancestor: from, descendant: to)
 
             rel.shared_hierarchy? || rel.circular_dependency?
           end

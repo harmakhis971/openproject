@@ -60,6 +60,58 @@ describe Relation, type: :model do
     end
   end
 
+  describe '#relation_type' do
+    Relation::TYPES.each do |key, type_hash|
+      let(:column_name) { type_hash[:sym] }
+      let(:type) { key }
+      let(:relation) do
+        FactoryGirl.build_stubbed(:relation,
+                                  relation_type: nil,
+                                  column_name => column_count)
+      end
+
+      context 'with the column set to 1' do
+        let(:column_count) { 1 }
+
+        it 'deduces the name from the column' do
+          expect(relation.relation_type)
+            .to eql type
+        end
+      end
+
+      context 'with the column set to 2' do
+        let(:column_count) { 2 }
+
+        it 'deduces the name from the column' do
+          expect(relation.relation_type)
+            .to eql type
+        end
+      end
+
+      context 'with the column set to 1 and another column also set to 1' do
+        let(:column_count) { 1 }
+        let(:other_column) do
+          if type == Relation::TYPE_RELATES
+            Relation::TYPE_DUPLICATES
+          else
+            Relation::TYPE_RELATES
+          end
+        end
+        let(:relation) do
+          FactoryGirl.build_stubbed(:relation,
+                                    relation_type: nil,
+                                    column_name => 1,
+                                    other_column => 1)
+        end
+
+        it 'is "mixed"' do
+          expect(relation.relation_type)
+            .to eql 'mixed'
+        end
+      end
+    end
+  end
+
   describe 'follows / precedes' do
     let(:type) { Relation::TYPE_FOLLOWS }
     it 'should follows relation should be reversed' do

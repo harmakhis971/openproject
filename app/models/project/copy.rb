@@ -198,23 +198,23 @@ module Project::Copy
         # Relations
         issue.relations_from.each do |source_relation|
           new_relation = Relation.new
-          new_relation.attributes = source_relation.attributes.dup.except('id', 'from_id', 'to_id')
-          new_relation.to = work_packages_map[source_relation.to_id]
-          if new_relation.to.nil? && Setting.cross_project_work_package_relations?
-            new_relation.to = source_relation.to
+          new_relation.attributes = source_relation.attributes.dup.except('id', 'from_id', 'to_id', 'relation_type')
+          new_relation.descendant = work_packages_map[source_relation.to_id]
+          if new_relation.descendant.nil? && Setting.cross_project_work_package_relations?
+            new_relation.descendant = source_relation.descendant
           end
-          new_relation.from = new_issue
+          new_relation.ancestor = new_issue
           new_relation.save
         end
 
         issue.relations_to.each do |source_relation|
           new_relation = Relation.new
-          new_relation.attributes = source_relation.attributes.dup.except('id', 'from_id', 'to_id')
-          new_relation.from = work_packages_map[source_relation.from_id]
-          if new_relation.from.nil? && Setting.cross_project_work_package_relations?
-            new_relation.from = source_relation.from
+          new_relation.attributes = source_relation.attributes.dup.except('id', 'from_id', 'to_id', 'relation_type')
+          new_relation.ancestor = work_packages_map[source_relation.from_id]
+          if new_relation.ancestor.nil? && Setting.cross_project_work_package_relations?
+            new_relation.ancestor = source_relation.ancestor
           end
-          new_relation.to = new_issue
+          new_relation.descendant = new_issue
           new_relation.save
         end
       end

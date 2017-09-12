@@ -46,10 +46,10 @@ describe 'GET /api/v3/relations', type: :request do
     end
 
     [
-      new_relation(from: work_package, to: new_work_package, type: 'precedes'),
-      new_relation(from: work_package, to: new_work_package, type: 'blocks'),
-      new_relation(from: new_work_package, to: work_package, type: 'precedes'),
-      new_relation(from: new_work_package, to: new_work_package, type: 'blocks')
+      new_relation(ancestor: work_package, descendant: new_work_package, type: 'precedes'),
+      new_relation(ancestor: work_package, descendant: new_work_package, type: 'blocks'),
+      new_relation(ancestor: new_work_package, descendant: work_package, type: 'precedes'),
+      new_relation(ancestor: new_work_package, descendant: new_work_package, type: 'blocks')
     ]
   end
 

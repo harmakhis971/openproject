@@ -159,7 +159,7 @@ describe Project::Copy, type: :model do
         before do
           wp = work_package
           wp2 = work_package2
-          FactoryGirl.create(:relation, from: wp, to: wp2)
+          FactoryGirl.create(:relation, ancestor: wp, descendant: wp2)
           [wp, wp2].each do |wp| project.work_packages << wp end
 
           copy.send :copy_work_packages, project

@@ -41,14 +41,14 @@ module API
         link :from do
           {
             href: api_v3_paths.work_package(represented.from_id),
-            title: represented.from.subject
+            title: represented.ancestor.subject
           }
         end
 
         link :to do
           {
             href: api_v3_paths.work_package(represented.to_id),
-            title: represented.to.subject
+            title: represented.descendant.subject
           }
         end
 
@@ -84,15 +84,21 @@ module API
         # run before saving any relation.
         property :delay,
                  render_nil: true,
-                 if: -> (*) {
+                 if: ->(*) {
                    # the relation type may be blank when parsing for an update
                    relation_type == "precedes" || relation_type.blank?
                  }
 
         property :description, render_nil: true
 
-        property :from, embedded: true, exec_context: :decorator, if: -> (*) { embed_links }
-        property :to, embedded: true, exec_context: :decorator, if: -> (*) { embed_links }
+        property :from,
+                 embedded: true,
+                 exec_context: :decorator,
+                 if: ->(*) { embed_links }
+        property :to,
+                 embedded: true,
+                 exec_context: :decorator,
+                 if: ->(*) { embed_links }
 
         ##
         # Used while parsing JSON to initialize `from` and `to` through the given links.
@@ -152,15 +158,15 @@ module API
         end
 
         def manage_relations?
-          current_user_allowed_to :manage_work_package_relations, context: represented.from.project
+          current_user_allowed_to :manage_work_package_relations, context: represented.ancestor.project
         end
 
         def from
-          represent_work_package(represented.from)
+          represent_work_package(represented.ancestor)
         end
 
         def to
-          represent_work_package(represented.to)
+          represent_work_package(represented.descendant)
         end
 
         def represent_work_package(wp)
@@ -171,8 +177,8 @@ module API
           )
         end
 
-        self.to_eager_load = [:to,
-                              from: { project: :enabled_modules }]
+        self.to_eager_load = [:descendant,
+                              ancestor: { project: :enabled_modules }]
       end
     end
   end

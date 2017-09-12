@@ -54,7 +54,7 @@ describe ::API::V3::Relations::RelationRepresenter, type: :request do
   let!(:wp_2_2) { FactoryGirl.create :work_package, project: project_2, subject: "WP 2.2" }
 
   let!(:relation_wp_2_1_to_wp_2_2) do
-    FactoryGirl.create :relation, from: wp_2_1, to: wp_2_2, relation_type: "relates"
+    FactoryGirl.create :relation, ancestor: wp_2_1, descendant: wp_2_2, relation_type: "relates"
   end
 
   let(:href) { "/api/v3/work_packages/#{wp_1.id}/available_relation_candidates?query=WP" }
@@ -139,11 +139,11 @@ describe ::API::V3::Relations::RelationRepresenter, type: :request do
 
       describe 'with an already existing relationship from the work package' do
         let!(:relation_wp_2_to_wp_2_2) do
-          FactoryGirl.create :relation, from: wp_2, to: wp_2_2, relation_type: "relates"
+          FactoryGirl.create :relation, ancestor: wp_2, descendant: wp_2_2, relation_type: "relates"
         end
 
         let!(:relation_wp_1_1_to_wp_2) do
-          FactoryGirl.create :relation, from: wp_1_1, to: wp_2, relation_type: "relates"
+          FactoryGirl.create :relation, ancestor: wp_1_1, descendant: wp_2, relation_type: "relates"
         end
 
         it 'does not contain the work packages with which a relationship already exists' do

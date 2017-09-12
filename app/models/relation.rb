@@ -99,15 +99,34 @@ class Relation < ActiveRecord::Base
   attr_accessor :relation_type
 
   def relation_type=(type)
-    column = if TYPES.key?(type) && TYPES[type][:reverse]
-               TYPES[type][:reverse]
-             else
-               type
-             end
+    if type
+      column = if TYPES.key?(type) && TYPES[type][:reverse]
+                 TYPES[type][:reverse]
+               else
+                 type
+               end
 
-    send("#{column}=", 1)
+      send("#{column}=", 1)
+    end
 
     @relation_type = type
+  end
+
+  # TODO: move parts to typed_dag
+  def relation_type
+    @relation_type ||= begin
+      types = (TYPES.keys & Relation.column_names).select do |name|
+        send(name) > 0
+      end
+
+      if types.length == 1
+        TYPES.detect do |_, type_hash|
+          type_hash[:sym] == types[0]
+        end[0]
+      else
+        'mixed'
+      end
+    end
   end
 
   def self.visible(user = User.current)
@@ -207,6 +226,10 @@ class Relation < ActiveRecord::Base
   def shared_hierarchy?
     # TODO: reimplement
     # from.is_descendant_of?(to) || from.is_ancestor_of?(to)
+  end
+
+  def reverse_type
+    Relation::TYPES[relation_type][:sym]
   end
 
   private

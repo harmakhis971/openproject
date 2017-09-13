@@ -47,7 +47,7 @@ describe WorkPackage, type: :model do
     FactoryGirl.create(:relation,
                        ancestor: work_package,
                        descendant: wp,
-                       hierarchy: 1)
+                       relation_type: 'hierarchy')
 
     wp
   end
@@ -57,7 +57,7 @@ describe WorkPackage, type: :model do
     FactoryGirl.create(:relation,
                        ancestor: child_work_package,
                        descendant: wp,
-                       hierarchy: 1)
+                       relation_type: 'hierarchy')
 
     wp
   end
@@ -67,7 +67,7 @@ describe WorkPackage, type: :model do
     FactoryGirl.create(:relation,
                        ancestor: grandchild_work_package,
                        descendant: wp,
-                       hierarchy: 1)
+                       relation_type: 'hierarchy')
 
     wp
   end
@@ -77,7 +77,7 @@ describe WorkPackage, type: :model do
     FactoryGirl.create(:relation,
                        ancestor: wp,
                        descendant: work_package,
-                       hierarchy: 1)
+                       relation_type: 'hierarchy')
 
     wp
   end
@@ -87,7 +87,7 @@ describe WorkPackage, type: :model do
     FactoryGirl.create(:relation,
                        ancestor: wp,
                        descendant: parent_work_package,
-                       hierarchy: 1)
+                       relation_type: 'hierarchy')
 
     wp
   end

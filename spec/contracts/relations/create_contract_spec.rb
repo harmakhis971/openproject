@@ -36,7 +36,7 @@ describe Relations::CreateContract do
   let(:user) { FactoryGirl.build_stubbed :admin }
 
   let(:relation) do
-    Relation.new from: from, to: to, relation_type: "follows", delay: 42
+    Relation.new ancestor: from, descendant: to, relation_type: "follows", delay: 42
   end
 
   subject(:contract) { described_class.new relation, user }

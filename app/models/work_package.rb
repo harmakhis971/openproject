@@ -41,7 +41,6 @@ class WorkPackage < ActiveRecord::Base
   DONE_RATIO_OPTIONS = %w(field status disabled).freeze
   ATTRIBS_WITH_VALUES_FROM_CHILDREN =
     %w(start_date due_date estimated_hours done_ratio).freeze
-  # <<< issues.rb <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
   belongs_to :project
   belongs_to :type
@@ -84,7 +83,6 @@ class WorkPackage < ActiveRecord::Base
     end
   }
 
-  # >>> issues.rb >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   scope :with_status_open, ->() {
     includes(:status)
       .where(statuses: { is_closed: false })
@@ -116,8 +114,6 @@ class WorkPackage < ActiveRecord::Base
     where(author_id: author.id)
   }
 
-  # <<< issues.rb <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
   after_initialize :set_default_values
 
   acts_as_watchable
@@ -135,11 +131,9 @@ class WorkPackage < ActiveRecord::Base
 
   #after_destroy :update_parent_attributes
 
-  # >>> issues.rb >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   before_create :default_assign
   before_save :close_duplicates, :update_done_ratio_from_status
   before_destroy :remove_attachments
-  # <<< issues.rb <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
   acts_as_customizable
 
@@ -309,7 +303,7 @@ class WorkPackage < ActiveRecord::Base
   # Returns true if this work package is blocked by another work package that is still open
   def blocked?
     blocked_by
-      .open
+      .with_status_open
       .exists?
   end
 
@@ -421,7 +415,6 @@ class WorkPackage < ActiveRecord::Base
     statuses.order_by_position
   end
 
-  # >>> issues.rb >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   # Returns users that should be notified
   def recipients
     notified = project.notified_users + attribute_users.select { |u| u.notify_about?(self) }
@@ -459,7 +452,6 @@ class WorkPackage < ActiveRecord::Base
     write_attribute :estimated_hours, !!converted_hours ? converted_hours : h
   end
 
-  # >>> issues.rb >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   # Overrides Redmine::Acts::Customizable::InstanceMethods#available_custom_fields
   def available_custom_fields
     project && type ? (project.all_work_package_custom_fields & type.custom_fields) : []
@@ -636,6 +628,39 @@ class WorkPackage < ActiveRecord::Base
     ).to_a
   end
 
+  def self.relateable_to(wp)
+    visible
+      .not_self(wp) # can't relate to itself
+      .not_having_relations_from(wp) # can't relate to wp that relate to us (direct or transitively)
+      .not_having_direct_relation_to(wp) # can't relate to wp we relate to directly
+      .not_being_descendant_of(wp) # can't relate to a descendant (see relations)
+      .satisfying_cross_project_setting(wp)
+  end
+
+  def self.satisfying_cross_project_setting(wp)
+    if Setting.cross_project_work_package_relations?
+      all
+    else
+      where(project_id: wp.project_id)
+    end
+  end
+
+  def self.not_self(wp)
+    where.not(id: wp.id)
+  end
+
+  def self.not_having_direct_relation_to(wp)
+    where.not(id: wp.relations_from.direct.select(:to_id))
+  end
+
+  def self.not_having_relations_from(wp)
+    where.not(id: wp.relations_to.select(:from_id))
+  end
+
+  def self.not_being_descendant_of(wp)
+    where.not(id: wp.descendants.select(:to_id))
+  end
+
   # TODO: check why alias_method does not work
   def leaves
     hierarchy_leaves
@@ -797,7 +822,6 @@ class WorkPackage < ActiveRecord::Base
   end
 
   # End ReportsController extraction
-  # <<< issues.rb <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
   private
 
@@ -848,7 +872,6 @@ class WorkPackage < ActiveRecord::Base
     default_id && attributes.except(key).values.all?(&:blank?)
   end
 
-  # >>> issues.rb >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   # this removes all attachments separately before destroying the issue
   # avoids getting a ActiveRecord::StaleObjectError when deleting an issue
   def remove_attachments
@@ -943,8 +966,6 @@ class WorkPackage < ActiveRecord::Base
     ).to_a
   end
   private_class_method :count_and_group_by
-
-  # <<< issues.rb <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
   def set_attachments_error_details
     if invalid_attachment = attachments.detect { |a| !a.valid? }

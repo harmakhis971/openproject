@@ -40,8 +40,7 @@ module API
           end
           get do
             from = @work_package
-            query = work_package_query params[:query], from, params[:pageSize]
-            work_packages = filter_work_packages query, from, params[:type]
+            work_packages = work_package_queried params[:query], from, params[:pageSize]
 
             ::API::V3::WorkPackages::WorkPackageListRepresenter.new(
               work_packages,

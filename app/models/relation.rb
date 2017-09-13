@@ -1,4 +1,5 @@
 #-- encoding: UTF-8
+
 #-- copyright
 # OpenProject is a project management system.
 # Copyright (C) 2012-2017 the OpenProject Foundation (OPF)
@@ -86,14 +87,12 @@ class Relation < ActiveRecord::Base
     }
   }.freeze
 
-  #validates_presence_of :ancestor, :descendant#, :relation_type
   #validates_inclusion_of :relation_type, in: TYPES.keys + ['hierarchy']
   validates_numericality_of :delay, allow_nil: true
-  #validates_uniqueness_of :to_id, scope: :from_id
 
-  validate :validate_sanity_of_relation,
-           :validate_no_circular_dependency
+  validate :validate_sanity_of_relation
 
+  before_validation :reverse_if_needed
   before_save :update_schedule
 
   attr_accessor :relation_type
@@ -114,6 +113,11 @@ class Relation < ActiveRecord::Base
   # TODO: move to typed_dag
   def self.direct
     where("#{_dag_options.type_columns.join(' + ')} = 1")
+  end
+
+  def self.of_work_package_or_ancestors(work_package)
+    where(to_id: work_package.ancestors_relations.select(:from_id))
+      .or(where(to_id: work_package.id))
   end
 
   def relation_type=(type)
@@ -167,8 +171,6 @@ class Relation < ActiveRecord::Base
   end
 
   def update_schedule
-    reverse_if_needed
-
     if TYPE_PRECEDES == relation_type
       self.delay ||= 0
     else
@@ -189,7 +191,7 @@ class Relation < ActiveRecord::Base
   end
 
   def successor_soonest_start
-    if (TYPE_PRECEDES == relation_type) && delay && ancestor && (ancestor.start_date || ancestor.due_date)
+    if precedes == 1 && delay && ancestor && (ancestor.start_date || ancestor.due_date)
       (ancestor.due_date || ancestor.start_date) + 1 + delay
     end
   end
@@ -205,24 +207,6 @@ class Relation < ActiveRecord::Base
     self[:delay]
   end
 
-  def canonical_descendant
-    if TYPES.key?(relation_type) &&
-       TYPES[relation_type][:reverse]
-      ancestor
-    else
-      descendant
-    end
-  end
-
-  def canonical_ancestor
-    if TYPES.key?(relation_type) &&
-       TYPES[relation_type][:reverse]
-      descendant
-    else
-      ancestor
-    end
-  end
-
   def canonical_type
     if TYPES.key?(relation_type) &&
        TYPES[relation_type][:reverse]
@@ -232,13 +216,8 @@ class Relation < ActiveRecord::Base
     end
   end
 
-  def circular_dependency?
-    canonical_descendant.all_dependent_packages.include? canonical_ancestor
-  end
-
   def shared_hierarchy?
-    # TODO: reimplement
-    # from.is_descendant_of?(to) || from.is_ancestor_of?(to)
+    ancestor.descendants.include?(descendant) || descendant.ancestors.include?(ancestor)
   end
 
   private
@@ -250,14 +229,6 @@ class Relation < ActiveRecord::Base
     errors.add :to_id, :not_same_project unless ancestor.project_id == descendant.project_id ||
                                                 Setting.cross_project_work_package_relations?
     errors.add :base, :cant_link_a_work_package_with_a_descendant if shared_hierarchy?
-  end
-
-  def validate_no_circular_dependency
-    return unless ancestor && descendant
-
-    if !(changed & ['from_id', 'to_id']).empty? && circular_dependency?
-      errors.add :base, :circular_dependency
-    end
   end
 
   # Reverses the relation if needed so that it gets stored in the proper way

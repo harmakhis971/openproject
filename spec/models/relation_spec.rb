@@ -123,14 +123,14 @@ describe Relation, type: :model do
       expect(relation.descendant).to eq(ancestor)
     end
 
-    it 'should fail validation with invalid date and does not reverse type' do
+    it 'should fail validation with invalid date reverses' do
       relation.delay = 'xx'
       expect(relation).not_to be_valid
       expect(relation.save).to eq(false)
 
-      expect(relation.relation_type).to eq(Relation::TYPE_FOLLOWS)
-      expect(relation.ancestor).to eq(ancestor)
-      expect(relation.descendant).to eq(descendant)
+      expect(relation.relation_type).to eq(Relation::TYPE_PRECEDES)
+      expect(relation.ancestor).to eq(descendant)
+      expect(relation.descendant).to eq(ancestor)
     end
   end
 
@@ -204,7 +204,6 @@ describe Relation, type: :model do
     end
   end
 
-  # TODO: move to typed_dag
   describe 'it should validate circular dependency' do
     let(:otherwp) { FactoryGirl.create(:work_package) }
     let(:relation) do

@@ -126,8 +126,8 @@ class WorkPackage < ActiveRecord::Base
 
   #include OpenProject::NestedSet::WithRootIdScope
 
-  #after_save :reschedule_following_work_packages,
-  after_save :update_parent_attributes
+  after_save :reschedule_following_work_packages,
+             :update_parent_attributes
 
   # TODO: adapt to have them called
   #after_move :remove_invalid_relations,
@@ -284,7 +284,7 @@ class WorkPackage < ActiveRecord::Base
 
     # attributes don't come from form, so it's safe to force assign
     self.attributes = work_package.attributes.dup.except(*merged_options[:exclude])
-    self.parent_id = work_package.parent_id if work_package.parent_id
+    self.parent = work_package.parent if work_package.parent
     self.custom_field_values = work_package
                                .custom_values
                                .map { |cv| [cv.custom_field_id, cv.value] }
@@ -308,7 +308,9 @@ class WorkPackage < ActiveRecord::Base
   # RELATIONS
   # Returns true if this work package is blocked by another work package that is still open
   def blocked?
-    !relations_to.detect { |ir| ir.relation_type == 'blocks' && !ir.from.closed? }.nil?
+    blocked_by
+      .open
+      .exists?
   end
 
   def relations
@@ -335,35 +337,31 @@ class WorkPackage < ActiveRecord::Base
     time_entries.update_all(project_id: project.id)
   end
 
-  def all_dependent_packages(except = [])
-    except << self
-    dependencies = []
-    # TODO: reimplement
-    #relations.includes(:from, :to).each do |relation|
-    #  work_package = relation.canonical_to
-
-    #  if work_package && !except.include?(work_package)
-    #    dependencies << work_package
-    #    dependencies += work_package.all_dependent_packages(except)
-    #  end
-    #end
-    dependencies
-  end
-
-  # Returns an array of issues that duplicate this one
-  def duplicates
-    relations_to.select { |r| r.relation_type == Relation::TYPE_DUPLICATES }.map(&:from)
-  end
-
+  # Calculates the minimum date that
+  # will not violate the precedes relations (max(due date, start date) + delay)
+  # of this work package or its ancestors
+  # e.g.
+  # AP(due_date: 2017/07/24, delay: 1)-precedes-A
+  #                                             |
+  #                                           parent
+  #                                             |
+  # BP(due_date: 2017/07/22, delay: 2)-precedes-B
+  #                                             |
+  #                                           parent
+  #                                             |
+  # BP(due_date: 2017/07/25, delay: 2)-precedes-C
+  #
+  # Then soonest_start for:
+  #   C is 2017/07/27
+  #   B is 2017/07/25
+  #   A is 2017/07/25
   def soonest_start
     @soonest_start ||=
-      self_and_ancestors.includes(relations_to: :ancestor)
-                        .where(relations: { relation_type: Relation::TYPE_PRECEDES })
-                        .map(&:relations_to)
-                        .flatten
-                        .map(&:successor_soonest_start)
-                        .compact
-                        .max
+      Relation.of_work_package_or_ancestors(self)
+              .with_type_columns(precedes: 1)
+              .map(&:successor_soonest_start)
+              .compact
+              .max
   end
 
   # Users/groups the work_package can be assigned to
@@ -407,15 +405,6 @@ class WorkPackage < ActiveRecord::Base
     type && type.is_milestone?
   end
   alias_method :is_milestone?, :milestone?
-
-  # Overwriting awesome nested set here as it considers unpersisted work
-  # packages to not be leaves.
-  # https://github.com/collectiveidea/awesome_nested_set/blob/master/lib/awesome_nested_set/model.rb#L135
-  # The OP workflow however requires to first create a WP before children can
-  # be assigned to it. Unpersisted WPs are hence always leaves.
-  #def leaf?
-  #  new_record? || super
-  #end
 
   # Returns an array of status that user is able to apply
   def new_statuses_allowed_to(user, include_default = false)
@@ -900,19 +889,27 @@ class WorkPackage < ActiveRecord::Base
 
   # Closes duplicates if the issue is being closed
   def close_duplicates
-    if closing?
-      duplicates.each do |duplicate|
-        # Reload is needed in case the duplicate was updated by a previous duplicate
-        duplicate.reload
-        # Don't re-close it if it's already closed
-        next if duplicate.closed?
-        # Implicitly creates a new journal
-        duplicate.update_attribute :status, self.status
-        # Same user and notes
-        duplicate.journals.last.user = current_journal.user
-        duplicate.journals.last.notes = current_journal.notes
-      end
+    return unless closing?
+
+    duplicates.each do |duplicate|
+      # Reload is needed in case the duplicate was updated by a previous duplicate
+      duplicate.reload
+      # Don't re-close it if it's already closed
+      next if duplicate.closed?
+      # Implicitly creates a new journal
+      duplicate.update_attribute :status, self.status
+
+      override_last_journal_notes_and_user_of!(duplicate)
     end
+  end
+
+  def override_last_journal_notes_and_user_of!(other_work_package)
+    journal = other_work_package.journals.last
+    # Same user and notes
+    journal.user = current_journal.user
+    journal.notes = current_journal.notes
+
+    journal.save
   end
 
   # Query generator for selecting groups of issue counts for a project

@@ -59,6 +59,7 @@ module WorkPackage::Validations
 
     validate :validate_parent_exists
     validate :validate_parent_in_same_project
+    validate :validate_children_in_same_project
 
     validate :validate_status_transition
 
@@ -153,6 +154,14 @@ module WorkPackage::Validations
        !parent.is_a?(WorkPackage::InexistentWorkPackage)
 
       errors.add :parent, :cannot_be_in_another_project
+    end
+  end
+
+  def validate_children_in_same_project
+    if !Setting.cross_project_work_package_relations? &&
+       children.any? { |child| child.project != project }
+
+      errors.add :children, :cannot_be_in_another_project
     end
   end
 

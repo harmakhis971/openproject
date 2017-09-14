@@ -658,6 +658,11 @@ class WorkPackage < ActiveRecord::Base
     where.not(id: wp.descendants.select(:to_id))
   end
 
+  def self.order_by_ancestors_first
+    includes(:descendants_relations)
+      .reorder('relations.hierarchy DESC')
+  end
+
   # TODO: check why alias_method does not work
   def leaves
     hierarchy_leaves

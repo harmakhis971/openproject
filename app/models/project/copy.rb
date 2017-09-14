@@ -142,9 +142,13 @@ module Project::Copy
       # value.  Used to map the two together for issue relations.
       work_packages_map = {}
 
-      # Get issues sorted by root_id, lft so that parent issues
-      # get copied before their children
-      project.work_packages.reorder('root_id, lft').each do |issue|
+      # Get issues sorted by their depth in the hierarchy tree
+      # so that parents get copied before their children.
+      to_copy = project
+                .work_packages
+                .order_by_ancestors_first
+
+      to_copy.each do |issue|
         new_issue = WorkPackage.new
         new_issue.copy_from(issue)
         new_issue.project = self
@@ -165,9 +169,9 @@ module Project::Copy
           new_issue.category = categories.detect { |c| c.name == issue.category.name }
         end
         # Parent issue
-        if issue.parent_id
-          if (copied_parent = work_packages_map[issue.parent_id]) && copied_parent.reload
-            new_issue.parent_id = copied_parent.id
+        if issue.parent
+          if (copied_parent = work_packages_map[issue.parent.id]) && copied_parent.reload
+            new_issue.parent_relation.from_id = copied_parent.id
           end
         end
         work_packages << new_issue

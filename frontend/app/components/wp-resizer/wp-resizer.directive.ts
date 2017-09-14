@@ -56,6 +56,11 @@ export class WorkPackageResizerController {
     // Gettig starting position
     this.oldPosition = e.clientX;
 
+    // Change cursor icon
+    // This is handled via JS to ensure
+    // that the cursor stays the same even when the mouse leaves the actual resizer.
+    document.getElementsByTagName("body")[0].style.cursor = 'col-resize';
+
     // Necessary to encapsulate this to be able to remove the eventlistener later
     this.mouseMoveHandler = this.resizeElement.bind(this, this.detailsSide);
 
@@ -69,6 +74,9 @@ export class WorkPackageResizerController {
 
     // Disable mouse move
     window.removeEventListener('mousemove', this.mouseMoveHandler);
+
+    // Change cursor icon back
+    document.getElementsByTagName("body")[0].style.cursor = 'auto';
 
     // Take care at the end that the elemntFlex-Value is the same as the acutal value
     // When the mouseup is outside the container these values will differ

@@ -466,7 +466,18 @@ module API
                             v3_path: :work_package,
                             representer: ::API::V3::WorkPackages::WorkPackageRepresenter,
                             skip_render: ->(*) { represented.parent && !represented.parent.visible? },
-                            link_title_attribute: :subject
+                            link_title_attribute: :subject,
+                            setter: ->(fragment:, **) do
+                              id = ::API::Utilities::ResourceLinkParser.parse_id fragment["href"],
+                                                                                 property: 'parent',
+                                                                                 expected_version: '3',
+                                                                                 expected_namespace: 'work_packages'
+
+                              new_parent = WorkPackage.find_by(id: id) ||
+                                           ::WorkPackage::InexistentWorkPackage.new(id: id)
+
+                              represented.parent = new_parent
+                            end
 
         def _type
           'WorkPackage'

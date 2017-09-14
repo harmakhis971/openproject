@@ -55,7 +55,10 @@ module WorkPackage::Validations
     validate :validate_enabled_type
 
     validate :validate_milestone_constraint
-    validate :validate_parent_constraint
+    validate :validate_parent_not_milestone
+
+    validate :validate_parent_exists
+    validate :validate_parent_in_same_project
 
     validate :validate_status_transition
 
@@ -129,9 +132,27 @@ module WorkPackage::Validations
     end
   end
 
-  def validate_parent_constraint
-    if parent
-      errors.add :parent_id, :cannot_be_milestone if parent.is_milestone?
+  def validate_parent_not_milestone
+    if parent && parent.is_milestone?
+      errors.add :parent, :cannot_be_milestone
+    end
+  end
+
+  def validate_parent_exists
+    if parent &&
+       parent.is_a?(WorkPackage::InexistentWorkPackage)
+
+      errors.add :parent, :does_not_exist
+    end
+  end
+
+  def validate_parent_in_same_project
+    if parent &&
+       parent.project != project &&
+       !Setting.cross_project_work_package_relations? &&
+       !parent.is_a?(WorkPackage::InexistentWorkPackage)
+
+      errors.add :parent, :cannot_be_in_another_project
     end
   end
 
